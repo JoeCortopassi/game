@@ -7,7 +7,7 @@
 	width: 10px;
 }
 
-.selected {
+.player {
 	background-color: green;
 	border: 1px black solid;
 	float:left;
@@ -32,11 +32,14 @@
 }
 
 .offMap {
+	display:none;
+	/*
 	background-color: white;
 	border: 1px black solid;
 	float:left;
 	height: 10px;
 	width: 10px;
+	*/
 }
 </style>
 
@@ -95,16 +98,36 @@ function cloneObject(obj) {
 </script>
 
 <script>
-var player = { 'x' : 0, 'y' : 0 };
 var direction = 'none';
 var map = <?php echo $map; ?>;
-var view = { 'start': 0, 'end': 9, 'buffer': 2};
-var object_template = { 'position' : { 'x' : 0, 'y': 0 }, 'velocity' : { 'x': 0, 'y': 0 }, 'vertices' : {}, 'type' : '' };
-var objects = [];
+var view = { 'start': 0, 'end': 14, 'buffer': 2};
+var environment_constants = { 'gravity': 0.2, 'ground_friction': 0.2, 'air_friction': 0.1 }
+var object_template = { 'position' : { 'x' : 0, 'y': 0 }, 'velocity' : { 'x': 0, 'y': 0 }, 'vertices' : {}, 'type' : '', 'name': '' };
+var environmentObjects = [];
+var enemyObjects = [];
+var playerObjects = [];
+var list_of_all_objects = [];
 
-function setupObjects()
+
+
+function setupPlayer()
 {
-	var wall1 = cloneObject(object_template);
+	player = cloneObject(object_template);
+	player.position = { 'x': 0, 'y': 0 };
+	player.vertices = [
+		{ 'x': 0, 'y': 0 }
+	];
+	player.type = 'player';
+	player.name = 'player';
+	playerObjects.push(player);
+	
+	list_of_all_objects.push(playerObjects);
+}
+
+
+function setupEnvironmentObjects()
+{
+	wall1 = cloneObject(object_template);
 	wall1.position = { 'x': 20, 'y': 0 };
 	wall1.vertices = [
 		{ 'x': 0, 'y': 0 },
@@ -115,7 +138,8 @@ function setupObjects()
 		{ 'x': 1, 'y': 2 }
 	];
 	wall1.type = 'wall';
-	objects.push(wall1);
+	wall1.name = 'wall1';
+	environmentObjects.push(wall1);
 	
 	
 	var wall2 = cloneObject(object_template);
@@ -132,7 +156,8 @@ function setupObjects()
 		{ 'x': 4, 'y': 0 }
 	];
 	wall2.type = 'wall';
-	objects.push(wall2);
+	wall2.name = 'wall2';
+	environmentObjects.push(wall2);
 	
 	
 	var wall3 = cloneObject(object_template);
@@ -146,26 +171,35 @@ function setupObjects()
 		{ 'x': 2, 'y': 1 }
 	];
 	wall3.type = 'wall';
-	objects.push(wall3);
+	wall3.name = 'wall3';
+	environmentObjects.push(wall3);
 	
-	
-	var enemy1 = cloneObject(object_template);
-	enemy1.position = { 'x': 100, 'y': 0 };
-	enemy1.velocity = { 'x': -0.1, 'y': 0 };
-	enemy1.vertices = [
-		{ 'x': 0, 'y': 0 },
-		{ 'x': 0, 'y': 1 },
-		{ 'x': 1, 'y': 0 },
-		{ 'x': 1, 'y': 1 },
-		{ 'x': 2, 'y': 0 },
-		{ 'x': 2, 'y': 1 }
-	];
-	enemy1.type = 'enemy';
-	objects.push(enemy1);
-	
-	
+	list_of_all_objects.push(environmentObjects);
 }
 
+
+function setupEnemyObjects()
+{
+	var enemy1 = cloneObject(object_template);
+	enemy1.position = { 'x': 30, 'y': 0 };
+	enemy1.velocity = { 'x': 0.2, 'y': 0 };
+	enemy1.vertices = [
+		{ 'x': 0, 'y': 0 }
+	];
+	enemy1.type = 'enemy';
+	enemy1.name = 'enemy1';
+	enemyObjects.push(enemy1);
+	
+	list_of_all_objects.push(enemyObjects);
+}
+
+
+function setupObjects()
+{
+	setupEnvironmentObjects();
+	setupEnemyObjects();
+	setupPlayer();
+}
 
 
 
@@ -192,66 +226,25 @@ window.onkeypress = keyDownEvent;
 
 
 
-function updatePlayer()
-{	
-	// Update player position
-	if ( direction === 'left' )
-	{
-		player.x -= 1;
-	}
-	else if ( direction === 'right' )
-	{
-		player.x += 1;
-	}
-	else if ( direction === 'up' )
-	{
-		player.y += 1;
-	}
-	else if ( direction === 'down' )
-	{
-		player.y -= 1;
-	}
-	else
-	{
-		
-	}
-	
-	
-	// Keep player within the bounds of the map
-	if ( player.y >= map.length )
-	{
-		player.y = map.length - 1;	
-	}
-	else if ( player.y < 0 )
-	{
-		player.y = 0;	
-	}
-	else if ( player.x > view.end )
-	{
-		player.x = view.end;	
-	}
-	else if ( player.x < view.start )
-	{
-		player.x = view.start;	
-	}
-	else
-	{
-		
-	}
-	
-	direction = 'none';
-}
 
 
 
+
+
+
+
+
+/**
+ *   Functions dealing with the view
+ */
 function scrollViewWithPlayer()
 {
-	if ( ( player.x > view.end - view.buffer ) && player.x < map[0].length - view.buffer )
+	if ( ( player.position.x > view.end - view.buffer ) && player.position.x < map[0].length - view.buffer )
 	{
 		view.start++;
 		view.end++;
 	}
-	else if ( ( player.x < view.start + view.buffer ) && player.x >= 0 + view.buffer )
+	else if ( ( player.position.x < view.start + view.buffer ) && player.position.x >= 0 + view.buffer )
 	{
 		view.start--;
 		view.end--;
@@ -286,36 +279,217 @@ function updateView()
 		}
 	}
 	
-	// Place the player back on the map
-	if ( player.x <= view.end && player.x >= view.start )
-	{
-		var new_cell = document.getElementById('cell_'+player.y+'_'+player.x)
-		new_cell.className = 'selected';
-	}
+	
 }
 
 
-function upateObjects()
+
+
+
+
+
+
+/**
+ *	Functions dealing with collision detection
+ */
+function collidesWithObjectFromDirection( name, position_x, position_y, velocity_x, velocity_y )
 {
-	for( var i = 0; i < objects.length; i++ )
+	var collision_detected = false;
+	
+	// All object lists
+	for( var i = 0; i < list_of_all_objects.length; i++ )
 	{
-		if ( objects[i].velocity.x != 0 )
+		// All objects in a list
+		for( var j = 0; j < list_of_all_objects[i].length; j++ )
 		{
-			objects[i].position.x += objects[i].velocity.x;
+			var object = list_of_all_objects[i][j];
+			
+			if ( object.name === name )
+			{
+				continue;
+			}
+			
+			// All vertices for an object
+			for( var k = 0; k < object.vertices.length; k++ )
+			{
+				var vertice = { 'x': object.vertices[k].x, 'y': object.vertices[k].y };
+			
+				vertice.x += object.position.x;
+				vertice.y += object.position.y;
+				
+				if ( vertice.x === Math.round(position_x) && vertice.y === Math.round(position_y) )
+				{
+					collision_detected = true;
+					velocity_x *= -1;
+					velocity_y *= -1;
+				}
+				
+				if( collision_detected )
+				{
+					return { 'x': velocity_x, 'y': velocity_y };
+				}
+			}
+		}
+	}
+	
+	return false;
+}
+
+
+
+
+
+
+
+
+
+
+/**
+ *  Function dealing with updating objects
+ */
+
+
+function upateObjects( object_list )
+{
+	for( var i = 0; i < object_list.length; i++ )
+	{
+		var new_position = {
+			'x': object_list[i].position.x + object_list[i].velocity.x,
+			'y': object_list[i].position.y + object_list[i].velocity.y
+		};
+		
+		var new_velocity = collidesWithObjectFromDirection( object_list[i].name, new_position.x, new_position.y, object_list[i].velocity.x, object_list[i].velocity.y );
+		
+		if ( new_velocity )
+		{
+			object_list[i].velocity = new_velocity;
 		}
 		
-		if ( objects[i].velocity.y != 0 )
+		if ( object_list[i].velocity.x != 0 )
 		{
-			objects[i].position.y += objects[i].velocity.y;
+			object_list[i].position.x += object_list[i].velocity.x;
 		}
+		
+		if ( object_list[i].velocity.y != 0 )
+		{
+			object_list[i].position.y += object_list[i].velocity.y;
+		}
+		
+		// Add gravity
+		object_list[i].velocity.y -= environment_constants.gravity;
+		
+		if ( object_list[i].position.y < 0 )
+		{
+			object_list[i].position.y = 0;
+			object_list[i].velocity.y = 0;
+		}
+		
+		
+		// Add friction
+		//if ( object_list[i].position.x === 0 )
+		//{
+		//	object_list[i].velocity.x -= ( object_list[i].velocity.x * environment_constants.ground_friction );
+		//}
+		//else
+		//{
+		//	object_list[i].velocity.x -= ( object_list[i].velocity.x * environment_constants.air_friction );
+		//}
 	}
 }
 
-function drawObjects()
-{
-	for( var i = 0; i < objects.length; i++ )
+
+
+function updatePlayer()
+{	
+	// Update player position
+	if ( direction === 'left' )
 	{
-		var object = objects[i];
+		player.velocity.x -= 1;
+	}
+	else if ( direction === 'right' )
+	{
+		player.velocity.x += 1;
+	}
+	else if ( direction === 'up' )
+	{
+		player.velocity.y += 1;
+	}
+	else if ( direction === 'down' )
+	{
+		player.velocity.y -= 1;
+	}
+	else
+	{
+		
+	}
+	
+	player.position.x += player.velocity.x;
+	player.position.y += player.velocity.y;
+	
+	
+	
+		// Add gravity
+		player.velocity.y -= environment_constants.gravity;
+		
+		if ( player.position.y < 0 )
+		{
+			player.position.y = 0;
+			player.velocity.y = 0;
+		}
+		
+		
+		// Add friction
+		if ( player.position.y === 0 )
+		{
+			player.velocity.x -= ( player.velocity.x * environment_constants.ground_friction );
+		}
+		else
+		{
+			player.velocity.x -= environment_constants.air_friction;
+		}
+	
+	
+	
+	
+	// Keep player within the bounds of the map
+	if ( player.position.y >= map.length )
+	{
+		player.position.y = map.length - 1;	
+	}
+	else if ( player.position.y < 0 )
+	{
+		player.position.y = 0;	
+	}
+	else if ( player.position.x > view.end )
+	{
+		player.position.x = view.end;	
+	}
+	else if ( player.position.x < view.start )
+	{
+		player.position.x = view.start;	
+	}
+	else
+	{
+		
+	}
+	
+	direction = 'none';
+}
+
+
+
+
+
+
+/**
+ *	 Functions dealing with drawing/display
+ */
+
+function drawObjects( object_array )
+{
+	for( var i = 0; i < object_array.length; i++ )
+	{
+		var object = object_array[i];
 
 		for( var j = 0; j < object.vertices.length; j++ )
 		{
@@ -356,14 +530,15 @@ function drawObjectAtCoordinatesWithType( x, y, type )
 
 function gameLoop()
 {
-	
 	updatePlayer();
-	upateObjects();
+	upateObjects(enemyObjects);
 	scrollViewWithPlayer();
 	updateView();
-	drawObjects();
+	drawObjects(environmentObjects);
+	drawObjects(enemyObjects); 
+	drawObjects(playerObjects); 
 
-	setTimeout(gameLoop, 10);
+	setTimeout(gameLoop, 100);
 }
 
 setupObjects();
